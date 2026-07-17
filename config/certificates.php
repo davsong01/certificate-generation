@@ -3,6 +3,9 @@
 use App\Models\User;
 use DavidOghi\CertificateGeneration\Models\CertificateTemplate;
 use DavidOghi\CertificateGeneration\Models\IssuedCertificate;
+use DavidOghi\CertificateGeneration\Support\DefaultCertificateActorResolver;
+use DavidOghi\CertificateGeneration\Support\DefaultCertificateAuthorizationResolver;
+use DavidOghi\CertificateGeneration\Support\DefaultCertificateContext;
 use DavidOghi\CertificateGeneration\Support\DefaultCertificateNumberGenerator;
 use DavidOghi\CertificateGeneration\Support\NullCertificateScope;
 use DavidOghi\CertificateGeneration\Support\RouteVerificationUrlGenerator;
@@ -32,7 +35,11 @@ return [
     ],
 
     'authorization' => [
-        'manage_ability' => 'manage-certificates',
+        'context' => DefaultCertificateContext::class,
+        'actor_resolver' => DefaultCertificateActorResolver::class,
+        'permission_resolver' => DefaultCertificateAuthorizationResolver::class,
+        'manage_ability' => null,
+        'guard' => null,
         // Optional fallback for hosts that use a role/type column instead of a Gate.
         'allowed_actor_types' => [],
         'actor_type_column' => 'type',
@@ -45,6 +52,8 @@ return [
         'download_enabled' => true,
         'preview_enabled' => true,
         'prefix' => 'certificates',
+        'management_prefix' => 'manage',
+        'admin_prefix' => null,
         'middleware' => ['web', 'auth'],
         'public_middleware' => ['web'],
         'name' => 'certificates.',
@@ -74,7 +83,7 @@ return [
     ],
 
     'rendering' => [
-        'format' => 'png', // png, jpg, jpeg, or webp
+        'format' => 'jpg', // png, jpg, jpeg, or webp
         'issued_date_format' => 'jS \\d\\a\\y \\o\\f F, Y',
         'storage_date_format' => 'Y/m/d',
     ],
@@ -107,6 +116,7 @@ return [
     ],
 
     'ui' => [
+        'bootstrap_version' => 4,
         'designer_badge' => 'Certificate Designer',
         'create_title' => 'Create Certificate Template',
         'edit_title' => 'Edit Certificate Template',
@@ -161,16 +171,24 @@ return [
         ],
     ],
 
-    // Map the designer's font filename to an absolute TTF path. Dompdf's
-    // bundled DejaVu fonts are a convenient default when available.
+    // Map the designer's font filename to an absolute TTF path. This fork
+    // keeps the legacy project fonts available out of the box.
     'fonts' => [
-        'DejaVuSans.ttf' => [
-            'label' => 'DejaVu Sans',
-            'path' => base_path('vendor/dompdf/dompdf/lib/fonts/DejaVuSans.ttf'),
+        'Times-New-Roman.ttf' => [
+            'label' => 'Times New Roman',
+            'path' => base_path('public/certificate_fonts/Times-New-Roman.ttf'),
         ],
-        'DejaVuSerif.ttf' => [
-            'label' => 'DejaVu Serif',
-            'path' => base_path('vendor/dompdf/dompdf/lib/fonts/DejaVuSerif.ttf'),
+        'Times-New-Roman-Bold.ttf' => [
+            'label' => 'Times New Roman Bold',
+            'path' => base_path('public/certificate_fonts/Times-New-Roman-Bold.ttf'),
+        ],
+        'Pesaro-Bold.ttf' => [
+            'label' => 'Pesaro-Bold',
+            'path' => base_path('public/certificate_fonts/Pesaro-Bold.ttf'),
+        ],
+        'Edwardian-Script-ITC.ttf' => [
+            'label' => 'Edwardian Script ITC',
+            'path' => base_path('public/certificate_fonts/Edwardian-Script-ITC.ttf'),
         ],
     ],
 ];

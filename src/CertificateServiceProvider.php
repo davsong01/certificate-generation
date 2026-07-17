@@ -3,12 +3,16 @@
 namespace DavidOghi\CertificateGeneration;
 
 use DavidOghi\CertificateGeneration\Actions\IssueCertificate;
+use DavidOghi\CertificateGeneration\Contracts\CertificateActorResolver;
+use DavidOghi\CertificateGeneration\Contracts\CertificateAuthorizationResolver;
 use DavidOghi\CertificateGeneration\Contracts\CertificateContext;
 use DavidOghi\CertificateGeneration\Contracts\CertificateNumberGenerator;
 use DavidOghi\CertificateGeneration\Contracts\CertificateScope;
 use DavidOghi\CertificateGeneration\Contracts\CertificateTrigger;
 use DavidOghi\CertificateGeneration\Contracts\VerificationUrlGenerator;
 use DavidOghi\CertificateGeneration\Services\CertificateManager;
+use DavidOghi\CertificateGeneration\Support\DefaultCertificateActorResolver;
+use DavidOghi\CertificateGeneration\Support\DefaultCertificateAuthorizationResolver;
 use DavidOghi\CertificateGeneration\Support\DefaultCertificateContext;
 use DavidOghi\CertificateGeneration\Support\DefaultCertificateNumberGenerator;
 use DavidOghi\CertificateGeneration\Support\NullCertificateScope;
@@ -24,7 +28,9 @@ class CertificateServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/certificates.php', 'certificates');
 
-        $this->app->bind(CertificateContext::class, DefaultCertificateContext::class);
+        $this->app->bind(CertificateActorResolver::class, config('certificates.authorization.actor_resolver', DefaultCertificateActorResolver::class));
+        $this->app->bind(CertificateAuthorizationResolver::class, config('certificates.authorization.permission_resolver', DefaultCertificateAuthorizationResolver::class));
+        $this->app->bind(CertificateContext::class, config('certificates.authorization.context', DefaultCertificateContext::class));
         $this->app->bind(CertificateScope::class, config('certificates.scope', NullCertificateScope::class));
         $this->app->bind(CertificateNumberGenerator::class, config('certificates.certificate_numbers.generator', DefaultCertificateNumberGenerator::class));
         $this->app->bind(VerificationUrlGenerator::class, config('certificates.verification_urls.generator', RouteVerificationUrlGenerator::class));

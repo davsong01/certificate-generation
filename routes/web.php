@@ -6,6 +6,8 @@ use DavidOghi\CertificateGeneration\Http\Controllers\IssuedCertificateController
 use Illuminate\Support\Facades\Route;
 
 $prefix = trim(config('certificates.routes.prefix', 'certificates'), '/');
+$managementPrefix = trim(config('certificates.routes.management_prefix', 'manage'), '/');
+$adminPrefix = trim((string) config('certificates.routes.admin_prefix', ''), '/');
 $name = config('certificates.routes.name', 'certificates.');
 
 Route::middleware(config('certificates.routes.public_middleware', ['web']))
@@ -23,7 +25,7 @@ Route::middleware(config('certificates.routes.public_middleware', ['web']))
 
 if (config('certificates.routes.management_enabled', true)) {
     Route::middleware(config('certificates.routes.middleware', ['web', 'auth']))
-        ->prefix($prefix.'/manage')->name($name.'manage.')->group(function (): void {
+        ->prefix(implode('/', array_filter([$adminPrefix, $prefix, $managementPrefix])))->name($name.'manage.')->group(function (): void {
             Route::get('issued', IssuedCertificateController::class)->name('issued.index');
             if (config('certificates.routes.preview_enabled', true)) {
                 Route::post('templates/preview', [CertificateTemplateController::class, 'preview'])->name('templates.preview');

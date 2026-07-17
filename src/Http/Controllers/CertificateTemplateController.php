@@ -6,6 +6,7 @@ use DavidOghi\CertificateGeneration\Contracts\CertificateContext;
 use DavidOghi\CertificateGeneration\Contracts\CertificateScope;
 use DavidOghi\CertificateGeneration\Models\CertificateTemplate;
 use DavidOghi\CertificateGeneration\Services\CertificateManager;
+use App\Models\Program;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 use Illuminate\Support\Facades\Storage;
@@ -26,7 +27,7 @@ class CertificateTemplateController extends Controller
         $query = $this->scope->apply($this->templateQuery());
 
         $templates = $query
-            ->with('creator')->withCount('issuedCertificates')
+            ->with(['creator', 'programs'])->withCount(['issuedCertificates', 'programs'])
             ->when($filters['search'] ?? null, fn ($query, $search) => $query->where(
                 fn ($query) => $query->where('name', 'like', "%{$search}%")->orWhere('description', 'like', "%{$search}%")
             ))
@@ -58,7 +59,9 @@ class CertificateTemplateController extends Controller
     public function store(Request $request)
     {
         abort_unless($this->context->canManage(), 403);
-        $template = $this->certificates->create($this->validated($request), $this->context->actor());
+        $validated = $this->validated($request);
+        $template = $this->certificates->create($validated, $this->context->actor());
+        $this->syncPrograms($template, $validated['program_ids'] ?? []);
 
         return redirect()->route($this->routeName('manage.templates.edit'), $template)
             ->with('success', 'Certificate template created successfully.');
@@ -86,7 +89,9 @@ class CertificateTemplateController extends Controller
     {
         $template = $this->resolveTemplate($template);
         abort_unless($this->context->canManage(), 403);
-        $this->certificates->update($template, $this->validated($request, false), $this->context->actor());
+        $validated = $this->validated($request, false);
+        $template = $this->certificates->update($template, $validated, $this->context->actor());
+        $this->syncPrograms($template, $validated['program_ids'] ?? []);
 
         return redirect()->route($this->routeName('manage.templates.edit'), $template)
             ->with('success', 'Certificate template updated successfully.');
@@ -139,6 +144,8 @@ class CertificateTemplateController extends Controller
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'status' => ['nullable', 'boolean'],
+            'program_ids' => ['required', 'array', 'min:1'],
+            'program_ids.*' => ['integer', Rule::exists(config('certificates.models.program', Program::class), 'id')],
             'supported_modules' => $modules === [] ? ['prohibited'] : ['nullable', 'array'],
             'supported_modules.*' => ['string', Rule::in(array_keys($modules))],
             'settings' => ['nullable'],
@@ -167,7 +174,14 @@ class CertificateTemplateController extends Controller
             'fontOptions' => $this->certificates->certificateFontType(),
             'backgroundPreview' => $background,
             'previewKey' => $template ? 'template-'.$template->id : 'draft-'.str()->uuid(),
+            'programs' => Program::where('id', '<>', 1)->orderBy('p_name')->get(),
+            'selectedProgramIds' => $template?->programs()->pluck('id')->all() ?? [],
         ];
+    }
+
+    private function syncPrograms(CertificateTemplate $template, array $programIds): void
+    {
+        $template->programs()->sync($programIds);
     }
 
     private function templateQuery()

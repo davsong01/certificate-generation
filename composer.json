@@ -6,16 +6,16 @@
     "require": {
         "php": "^8.2",
         "ext-gd": "*",
-        "illuminate/contracts": "^11.0|^12.0|^13.0",
-        "illuminate/database": "^11.0|^12.0|^13.0",
-        "illuminate/filesystem": "^11.0|^12.0|^13.0",
-        "illuminate/http": "^11.0|^12.0|^13.0",
-        "illuminate/routing": "^11.0|^12.0|^13.0",
-        "illuminate/support": "^11.0|^12.0|^13.0",
-        "illuminate/validation": "^11.0|^12.0|^13.0",
+        "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/database": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/filesystem": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/http": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/routing": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/support": "^10.0|^11.0|^12.0|^13.0",
+        "illuminate/validation": "^10.0|^11.0|^12.0|^13.0",
         "dompdf/dompdf": "^3.0",
-        "endroid/qr-code": "^6.0",
-        "intervention/image": "^3.11"
+        "intervention/image": "^2.7",
+        "simplesoftwareio/simple-qrcode": "^4.2"
     },
     "autoload": {
         "psr-4": {

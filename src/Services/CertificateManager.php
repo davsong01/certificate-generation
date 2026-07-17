@@ -9,10 +9,6 @@ use DavidOghi\CertificateGeneration\Contracts\VerificationUrlGenerator;
 use DavidOghi\CertificateGeneration\Events\CertificateIssued;
 use DavidOghi\CertificateGeneration\Models\CertificateTemplate;
 use DavidOghi\CertificateGeneration\Models\IssuedCertificate;
-use Endroid\QrCode\Builder\Builder;
-use Endroid\QrCode\Encoding\Encoding;
-use Endroid\QrCode\ErrorCorrectionLevel;
-use Endroid\QrCode\Writer\PngWriter;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\UploadedFile;
@@ -21,9 +17,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
-use Intervention\Image\Drivers\Gd\Driver;
-use Intervention\Image\ImageManager;
-use Intervention\Image\Typography\FontFactory;
+use Intervention\Image\Facades\Image;
 use RuntimeException;
 use Throwable;
 
@@ -148,8 +142,8 @@ class CertificateManager
         $previewKey = $this->resolvePreviewKey($merged, $template);
 
         if ($template) {
-            if (auth()->check()) {
-                $this->assertOwnership($template, auth()->user());
+            if ($actor = $this->context->actor()) {
+                $this->assertOwnership($template, $actor);
             }
 
             $merged['supported_modules'] = $template->supported_modules;
@@ -199,16 +193,13 @@ class CertificateManager
         $settings = $this->normalizeSettings($template->settings ?? []);
         $this->validateSettings($settings);
 
-        $manager = new ImageManager(new Driver);
-        $image = $manager->read($background);
+        $image = Image::make($background);
 
-        $canvas = $settings['canvas'] ?? [];
-        $canvasWidth = (int) ($canvas['width'] ?? $image->width());
-        $canvasHeight = (int) ($canvas['height'] ?? $image->height());
-
-        if ($canvasWidth !== $image->width() || $canvasHeight !== $image->height()) {
-            $canvasWidth = $image->width();
-            $canvasHeight = $image->height();
+        if ($image->width() > 4000 || $image->height() > 4000) {
+            $image->resize(4000, null, function ($constraint) {
+                $constraint->aspectRatio();
+                $constraint->upsize();
+            });
         }
 
         $elements = $this->normalizeElements($settings['elements'] ?? []);
@@ -221,7 +212,7 @@ class CertificateManager
         if (! is_dir($outputDirectory)) {
             $outputDirectory = $this->storage->ensureDirectory($outputDirectory);
         }
-        $format = strtolower((string) config('certificates.rendering.format', 'png'));
+        $format = strtolower((string) config('certificates.rendering.format', 'jpg'));
         $format = in_array($format, ['png', 'jpg', 'jpeg', 'webp'], true) ? $format : 'png';
         $filename = ($certificateNumber ?: 'preview').'.'.$format;
         $absoluteOutputPath = rtrim($outputDirectory, DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR.$filename;
@@ -617,8 +608,8 @@ class CertificateManager
             $text = mb_strtoupper($text);
         }
 
-        $image->text($text, $x, $y, function (FontFactory $font) use ($fontFile, $size, $color, $align, $rotation, $width) {
-            $font->filename($fontFile);
+        $image->text($text, $x, $y, function ($font) use ($fontFile, $size, $color, $align, $rotation, $width) {
+            $font->file($fontFile);
             $font->size($size);
             $font->color($color);
             $font->align($align);
@@ -634,32 +625,19 @@ class CertificateManager
     private function renderQrCodeElement($image, array $element, string $verificationUrl): void
     {
         $size = max(60, (int) ($element['size'] ?? $element['width'] ?? $element['height'] ?? 120));
-        $builder = new Builder(
-            writer: new PngWriter,
-            writerOptions: [],
-            validateResult: false,
-            data: $verificationUrl,
-            encoding: new Encoding('UTF-8'),
-            errorCorrectionLevel: ErrorCorrectionLevel::High,
-            size: $size,
-            margin: 4,
-        );
-
-        $result = $builder->build();
-        $tempPath = tempnam(sys_get_temp_dir(), 'cert_qr_').'.png';
-        file_put_contents($tempPath, $result->getString());
-
-        $manager = new ImageManager(new Driver);
-        $qr = $manager->read($tempPath);
-        @unlink($tempPath);
-
         $offsetX = (int) ($element['left'] ?? $element['auto_certificate_left_offset'] ?? 0);
         $offsetY = (int) ($element['top'] ?? $element['auto_certificate_top_offset'] ?? 0);
-        $opacity = (float) ($element['opacity'] ?? 1);
-        $opacity = $opacity > 1 ? max(0, min(100, $opacity)) / 100 : max(0, min(1, $opacity));
-        $opacityPercent = (int) round($opacity * 100);
 
-        $image->place($qr, 'top-left', $offsetX, $offsetY, $opacityPercent);
+        $qrCodeData = \QrCode::format('png')
+            ->size($size)
+            ->margin(0)
+            ->backgroundColor(255, 255, 255, 0)
+            ->generate($verificationUrl);
+
+        $base64 = 'data:image/png;base64,'.base64_encode($qrCodeData);
+        $qrImage = Image::make($base64);
+
+        $image->insert($qrImage, 'top-left', $offsetX, $offsetY);
     }
 
     private function resolveElementText(array $element, array $data): ?string
@@ -702,6 +680,12 @@ class CertificateManager
         $path = is_array($definition) ? ($definition['path'] ?? null) : null;
 
         if (! is_file($path)) {
+            $fallback = public_path('certificate_fonts/'.$fontFace);
+
+            if (is_file($fallback)) {
+                return $fallback;
+            }
+
             throw new RuntimeException("The certificate font [{$fontFace}] could not be found.");
         }
 

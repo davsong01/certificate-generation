@@ -47,6 +47,8 @@
         })
         ->all();
     $flatTextTypeOptions = collect($textTypeOptions)->flatMap(fn ($items) => $items)->all();
+    $bootstrapVersion = (int) config('certificates.ui.bootstrap_version', 4);
+    $useBootstrap4 = $bootstrapVersion < 5;
 @endphp
 
 <style>
@@ -530,6 +532,85 @@
         font-family: inherit;
     }
 
+    @if($useBootstrap4)
+    .certificate-designer .designer-top-card .card-body,
+    .certificate-designer .designer-toolbar .card-body,
+    .certificate-designer .designer-panel .panel-body,
+    .certificate-designer .canvas-shell,
+    .certificate-designer .canvas-toolbar,
+    .certificate-designer .card-header,
+    .certificate-designer .card-footer {
+        padding: .8rem !important;
+    }
+    .certificate-designer .designer-top-card,
+    .certificate-designer .designer-toolbar,
+    .certificate-designer .canvas-shell {
+        border-radius: 12px;
+    }
+    .certificate-designer .designer-top-card .btn,
+    .certificate-designer .designer-toolbar .btn,
+    .certificate-designer .designer-panel .btn,
+    .certificate-designer .canvas-toolbar .btn,
+    .certificate-designer .btn-list .btn {
+        padding: .28rem .55rem;
+        line-height: 1.1;
+        min-height: 30px;
+    }
+    .certificate-designer .btn-list {
+        gap: .35rem !important;
+    }
+    .certificate-designer .designer-top-card .btn-list {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+    .certificate-designer .panel-card + .panel-card {
+        margin-top: .65rem;
+    }
+    .certificate-designer .panel-header {
+        padding: .65rem .75rem .5rem;
+    }
+    .certificate-designer .panel-body {
+        padding: .65rem .75rem .75rem;
+    }
+    .certificate-designer .panel-header h6,
+    .certificate-designer .canvas-toolbar .fw-semibold,
+    .certificate-designer .page-title {
+        margin-bottom: .25rem;
+    }
+    .certificate-designer .canvas-shell {
+        padding: .75rem;
+    }
+    .certificate-designer .canvas-toolbar {
+        margin-bottom: .65rem;
+    }
+    .certificate-designer .designer-toolbar .row,
+    .certificate-designer .designer-top-card .d-flex,
+    .certificate-designer .canvas-toolbar {
+        align-items: flex-start;
+    }
+    .certificate-designer .me-1 { margin-right: .25rem !important; }
+    .certificate-designer .me-2 { margin-right: .5rem !important; }
+    .certificate-designer .ms-1 { margin-left: .25rem !important; }
+    .certificate-designer .ms-2 { margin-left: .5rem !important; }
+    .certificate-designer .gap-1 > * + * { margin-left: .25rem !important; margin-top: .25rem !important; }
+    .certificate-designer .gap-2 > * + * { margin-left: .5rem !important; margin-top: .5rem !important; }
+    .certificate-designer .gap-3 > * + * { margin-left: 1rem !important; margin-top: 1rem !important; }
+    .certificate-designer .gap-4 > * + * { margin-left: 1.5rem !important; margin-top: 1.5rem !important; }
+    .certificate-designer .badge.bg-blue-lt,
+    .certificate-designer .badge.text-blue {
+        background: #e7f1ff !important;
+        color: #0d6efd !important;
+    }
+    .certificate-designer .form-switch {
+        padding-left: 0;
+    }
+    .certificate-designer .form-switch .form-check-input {
+        margin-left: 0;
+        position: static;
+    }
+    @endif
+
     @media (max-width: 1400px) {
         .certificate-designer .designer-shell {
             grid-template-columns: 1fr;
@@ -548,7 +629,7 @@
             <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
                 <div>
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
-                        <span class="badge bg-blue-lt text-blue">{{ $ui['designer_badge'] ?? 'Certificate Designer' }}</span>
+                        <span class="badge {{ $useBootstrap4 ? 'badge-primary' : 'bg-blue-lt text-blue' }}">{{ $ui['designer_badge'] ?? 'Certificate Designer' }}</span>
                         @if(!empty($selectedModules))
                             @foreach($selectedModules as $module)
                                 <span class="module-pill">{{ $moduleLabels[$module] ?? $module }}</span>
@@ -614,7 +695,7 @@
                     <label class="form-label">Supported Modules</label>
                     <div class="d-flex flex-wrap gap-2">
                         @foreach($moduleLabels as $key => $label)
-                            <label class="form-check form-switch mb-0">
+                            <label class="form-check mb-0">
                                 <input type="checkbox" class="form-check-input js-module-toggle" name="supported_modules[]" value="{{ $key }}" @checked(in_array($key, $selectedModules, true))>
                                 <span class="form-check-label">{{ $label }}</span>
                             </label>
@@ -736,7 +817,7 @@
                             <div class="inspector-row inspector-row-fields">
                                 <div>
                                     <label class="form-label">Font</label>
-                                    <select class="form-select form-select-sm" id="contextFont">
+                                    <select class="form-control form-control-sm" id="contextFont">
                                         @foreach($fontOptions as $fontFile => $fontLabel)
                                             <option value="{{ $fontFile }}">{{ $fontLabel }}</option>
                                         @endforeach
@@ -754,13 +835,13 @@
                                     <label class="form-label">Color</label>
                                     <div class="color-control">
                                         <input type="text" class="form-control form-control-sm hex-input" id="contextColorHex" placeholder="#ffffff" inputmode="text" autocomplete="off" spellcheck="false">
-                                        <input type="color" class="form-control form-control-color" id="contextColor" title="Pick a color" aria-label="Pick a color">
+                                        <input type="color" class="form-control form-control-sm" id="contextColor" title="Pick a color" aria-label="Pick a color">
                                     </div>
                                     <div class="muted-help mt-1">Hex or picker.</div>
                                 </div>
                                 <div>
                                     <label class="form-label">Align</label>
-                                    <select class="form-select form-select-sm" id="contextAlign">
+                                    <select class="form-control form-control-sm" id="contextAlign">
                                         <option value="left">Left</option>
                                         <option value="center">Center</option>
                                         <option value="right">Right</option>
@@ -771,7 +852,7 @@
                             <div class="inspector-row inspector-row-controls">
                                 <div>
                                     <label class="form-label">Opacity</label>
-                                    <input type="range" min="0" max="1" step="0.01" class="form-range" id="contextOpacity">
+                                    <input type="range" min="0" max="1" step="0.01" class="form-range custom-range" id="contextOpacity">
                                 </div>
                                 <div class="toggle-list">
                                     <label class="form-check compact-toggle">
@@ -845,7 +926,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Server Preview</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
                 <div class="modal-body">
                     <div class="text-center">
@@ -2004,10 +2085,22 @@
         const formData = new FormData(form);
         formData.set('settings', settingsField.value);
 
-        const modal = new bootstrap.Modal(previewModalElement);
+        const modal = window.bootstrap && window.bootstrap.Modal && previewModalElement
+            ? new window.bootstrap.Modal(previewModalElement)
+            : null;
         previewError.classList.add('d-none');
         previewError.textContent = '';
         previewImage.removeAttribute('src');
+        const showPreviewModal = () => {
+            if (modal) {
+                modal.show();
+                return;
+            }
+
+            if (window.jQuery && previewModalElement) {
+                window.jQuery(previewModalElement).modal('show');
+            }
+        };
 
         const button = designer.querySelector('[data-designer-action="preview"]');
         const originalHtml = button?.innerHTML;
@@ -2046,7 +2139,7 @@
                     }
 
                     previewImage.src = previewSource;
-                    modal.show();
+                    showPreviewModal();
                     return null;
                 }
 
@@ -2062,12 +2155,12 @@
                     return;
                 }
                 previewImage.src = URL.createObjectURL(blob);
-                modal.show();
+                showPreviewModal();
             })
             .catch((error) => {
                 previewError.textContent = error.message || 'Unable to generate preview right now.';
                 previewError.classList.remove('d-none');
-                modal.show();
+                showPreviewModal();
             })
             .finally(() => {
                 if (button) {

@@ -7,7 +7,7 @@ The drag-and-drop designer and server renderer use the same JSON payload, so the
 ## Requirements
 
 - PHP 8.2+
-- Laravel 11, 12, or 13
+- Laravel 10, 11, 12, or 13
 - GD with FreeType support
 - A local Laravel filesystem disk for private templates and issued files
 - Bootstrap 5 and Tabler Icons in the management layout used by the bundled designer
@@ -38,7 +38,7 @@ The default routes are:
 - `GET /certificates/{certificateNumber}/download`
 - `GET /certificates/preview/{token}`
 
-Management routes use `web` and `auth`; verification, preview, and download use `web`. All prefixes, names and middleware are configurable.
+Management routes use `web` and `auth` by default; verification, preview, and download use `web`. All prefixes, names and middleware are configurable. Host apps that need an admin prefix can set `routes.admin_prefix` and a custom middleware stack.
 
 ## Configure the host application
 
@@ -46,7 +46,7 @@ Set `certificates.layout` to a Blade layout that provides Bootstrap 5, Tabler Ic
 
 The default package assumes `App\Models\User`. Override `models.user` if the application's authenticatable model is elsewhere.
 
-Define the `manage-certificates` Gate for the users who may access the bundled management screens, or configure `authorization.allowed_actor_types` when the host uses a role/type column instead. Replacing `CertificateContext` gives complete control over authorization and recipient display data.
+The package does not assume a specific guard, role system, or menu schema. Configure certificate access by binding your own resolver classes or by replacing `CertificateContext`.
 
 Most host-owned behavior is configurable without publishing package code:
 
@@ -58,7 +58,9 @@ Most host-owned behavior is configurable without publishing package code:
 - `certificate_numbers` controls the standard prefix, separator, scope/year parts, random length, and collision attempts.
 - `templates.delete_policy` is `restrict` by default; set it to `cascade` only when deleting issued records and files with their template is intentional.
 - `ui` controls the bundled designer's main terminology; publish the views for complete presentation changes.
+- `ui.bootstrap_version` controls Bootstrap 4 vs 5 friendly markup defaults for the bundled designer views.
 - `models`, `tables`, `routes`, `storage`, `authorization`, `scope`, and `issuance.triggers` cover application integration. Management, verification, download, and preview routes can each be disabled independently.
+- `authorization.context`, `authorization.actor_resolver`, and `authorization.permission_resolver` let the host provide its own auth and permission adapter without forking the package.
 
 For behavior more specialized than scalar settings, replace a contract with a host class in configuration. Certificate-number and verification-URL generation are replaceable and remain compatible with `config:cache`:
 
@@ -108,6 +110,40 @@ $this->app->bind(CertificateContext::class, ApplicationCertificateContext::class
 ```
 
 `CertificateContext` controls the current actor, management authorization, and recipient name/email extraction. It has no tenancy methods.
+
+The smallest host integration is usually a pair of resolver classes:
+
+```php
+use DavidOghi\CertificateGeneration\Contracts\CertificateActorResolver;
+use DavidOghi\CertificateGeneration\Contracts\CertificateAuthorizationResolver;
+use Illuminate\Contracts\Auth\Authenticatable;
+
+class HostCertificateActorResolver implements CertificateActorResolver
+{
+    public function resolve(): ?Authenticatable
+    {
+        return auth('admin')->user();
+    }
+}
+
+class HostCertificateAuthorizationResolver implements CertificateAuthorizationResolver
+{
+    public function canManage(?Authenticatable $actor = null): bool
+    {
+        return $actor?->id === 1 || in_array('certificates.manage.templates.index', $actor?->menu_permissions ?? [], true);
+    }
+}
+```
+
+Then wire them in the host application config or service provider:
+
+```php
+'authorization' => [
+    'context' => \DavidOghi\CertificateGeneration\Support\DefaultCertificateContext::class,
+    'actor_resolver' => \App\Certificates\HostCertificateActorResolver::class,
+    'permission_resolver' => \App\Certificates\HostCertificateAuthorizationResolver::class,
+],
+```
 
 ## Fonts
 
