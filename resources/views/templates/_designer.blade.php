@@ -939,7 +939,6 @@
     </div>
 </div>
 
-@push('scripts')
 <script>
 (() => {
     const designer = document.getElementById('certificateDesigner');
@@ -2367,4 +2366,3 @@
     fitToScreen();
 })();
 </script>
-@endpush

@@ -130,6 +130,7 @@ return [
     'sample_data' => [
         'name' => 'Ada Lovelace',
         'email' => 'ada@example.com',
+        'staffID' => 'STF-000',
         'certificate_number' => 'CERT-00129',
         'date_issued' => '14 July 2026',
         'organisation_name' => 'Example Organisation',
@@ -160,6 +161,7 @@ return [
                 'items' => [
                     ['text_type' => 'name', 'label' => 'Recipient Name', 'sample_text' => 'Ada Lovelace'],
                     ['text_type' => 'email', 'label' => 'Recipient Email', 'sample_text' => 'ada@example.com'],
+                    ['text_type' => 'staffID', 'label' => 'Staff ID', 'sample_text' => 'STF-000'],
                     ['text_type' => 'certificate_number', 'label' => 'Certificate Number', 'sample_text' => 'CERT-00129'],
                     ['text_type' => 'date_issued', 'label' => 'Date Issued', 'sample_text' => '14 July 2026'],
                     ['text_type' => 'organisation_name', 'label' => 'Organisation Name', 'sample_text' => 'Example Organisation'],
