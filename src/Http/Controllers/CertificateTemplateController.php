@@ -169,12 +169,24 @@ class CertificateTemplateController extends Controller
             }
         }
 
+        $programs = Program::where('id', '<>', 1)
+            ->orderBy('p_name')
+            ->get()
+            ->filter(function (Program $program) use ($template) {
+                if ($template?->programs?->contains($program->id)) {
+                    return true;
+                }
+
+                return blank($program->certificate_template_id) && blank($program->auto_certificate_settings);
+            })
+            ->values();
+
         return [
             'modules' => $this->certificates->supportedModules(),
             'fontOptions' => $this->certificates->certificateFontType(),
             'backgroundPreview' => $background,
             'previewKey' => $template ? 'template-'.$template->id : 'draft-'.str()->uuid(),
-            'programs' => Program::where('id', '<>', 1)->orderBy('p_name')->get(),
+            'programs' => $programs,
             'selectedProgramIds' => $template?->programs()->pluck('id')->all() ?? [],
         ];
     }

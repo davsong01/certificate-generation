@@ -19,7 +19,7 @@ Route::middleware(config('certificates.routes.public_middleware', ['web']))
             Route::get('{certificateNumber}/download', [CertificateController::class, 'download'])->name('download');
         }
         if (config('certificates.routes.preview_enabled', true)) {
-            Route::get('preview/{token}', [CertificateController::class, 'preview'])->name('preview');
+            Route::get('preview/{token}', [CertificateController::class, 'preview'])->name('preview-file');
         }
     });
 

@@ -175,7 +175,7 @@ class CertificateManager
 
         return [
             ...$rendered,
-            'preview_url' => route($this->routeName('preview'), ['token' => Crypt::encryptString($rendered['relative_path'])]),
+            'preview_url' => route($this->routeName('preview-file'), ['token' => Crypt::encryptString($rendered['relative_path'])]),
         ];
     }
 
@@ -660,6 +660,15 @@ class CertificateManager
             'staffID' => 'staffID',
             'date_issued' => 'date_issued',
             'name' => 'name',
+            'email' => 'email',
+            'organisation_name' => 'organisation_name',
+            'organization_name' => 'organisation_name',
+            'organisation_address' => 'organisation_address',
+            'organization_address' => 'organisation_address',
+            'organisation_phone' => 'organisation_phone',
+            'organization_phone' => 'organisation_phone',
+            'organisation_email' => 'organisation_email',
+            'organization_email' => 'organisation_email',
         ];
 
         $key = $aliases[$textType] ?? $textType;
