@@ -22,7 +22,6 @@ class CertificateTemplateController extends Controller
 
     public function index(Request $request)
     {
-        abort_unless($this->context->canManage(), 403);
         $filters = $request->only(['search', 'status', 'module']);
         $query = $this->scope->apply($this->templateQuery());
 
@@ -63,14 +62,11 @@ class CertificateTemplateController extends Controller
 
     public function create()
     {
-        abort_unless($this->context->canManage(), 403);
-
         return view('certificates::templates.create', $this->formData());
     }
 
     public function store(Request $request)
     {
-        abort_unless($this->context->canManage(), 403);
         $validated = $this->validated($request);
         $template = $this->certificates->create($validated, $this->context->actor());
         $this->syncPrograms($template, $validated['program_ids'] ?? []);
@@ -82,7 +78,6 @@ class CertificateTemplateController extends Controller
     public function show(string|int $template)
     {
         $template = $this->resolveTemplate($template);
-        abort_unless($this->context->canManage(), 403);
         abort_unless($this->scope->owns($template, $this->context->actor()), 404);
 
         return view('certificates::templates.show', array_merge($this->formData($template), compact('template')));
@@ -91,7 +86,6 @@ class CertificateTemplateController extends Controller
     public function edit(string|int $template)
     {
         $template = $this->resolveTemplate($template);
-        abort_unless($this->context->canManage(), 403);
         abort_unless($this->scope->owns($template, $this->context->actor()), 404);
 
         return view('certificates::templates.edit', array_merge($this->formData($template), compact('template')));
@@ -100,7 +94,6 @@ class CertificateTemplateController extends Controller
     public function update(Request $request, string|int $template)
     {
         $template = $this->resolveTemplate($template);
-        abort_unless($this->context->canManage(), 403);
         $validated = $this->validated($request, false);
         $template = $this->certificates->update($template, $validated, $this->context->actor());
         $this->syncPrograms($template, $validated['program_ids'] ?? []);
@@ -112,7 +105,6 @@ class CertificateTemplateController extends Controller
     public function destroy(string|int $template)
     {
         $template = $this->resolveTemplate($template);
-        abort_unless($this->context->canManage(), 403);
         $this->certificates->delete($template, $this->context->actor());
 
         return redirect()->route($this->routeName('manage.templates.index'))
@@ -122,7 +114,6 @@ class CertificateTemplateController extends Controller
     public function duplicate(string|int $template)
     {
         $template = $this->resolveTemplate($template);
-        abort_unless($this->context->canManage(), 403);
         $copy = $this->certificates->duplicate($template, $this->context->actor());
 
         return redirect()->route($this->routeName('manage.templates.edit'), $copy)
@@ -132,7 +123,6 @@ class CertificateTemplateController extends Controller
     public function download(string|int $template)
     {
         $template = $this->resolveTemplate($template);
-        abort_unless($this->context->canManage(), 403);
         abort_unless($this->scope->owns($template, $this->context->actor()), 404);
         abort_unless($template->certificate_template && Storage::disk(config('certificates.storage.disk'))->exists($template->certificate_template), 404);
 
@@ -146,7 +136,6 @@ class CertificateTemplateController extends Controller
     public function preview(Request $request, string|int|null $template = null)
     {
         $template = $template === null ? null : $this->resolveTemplate($template);
-        abort_unless($this->context->canManage(), 403);
         if ($template) {
             abort_unless($this->scope->owns($template, $this->context->actor()), 404);
         }

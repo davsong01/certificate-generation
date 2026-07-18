@@ -38,11 +38,6 @@ return [
         'context' => DefaultCertificateContext::class,
         'actor_resolver' => DefaultCertificateActorResolver::class,
         'permission_resolver' => DefaultCertificateAuthorizationResolver::class,
-        'manage_ability' => null,
-        'guard' => null,
-        // Optional fallback for hosts that use a role/type column instead of a Gate.
-        'allowed_actor_types' => [],
-        'actor_type_column' => 'type',
     ],
 
     'routes' => [
@@ -117,7 +112,7 @@ return [
 
     'ui' => [
         // The host can display this to verify which package build is deployed.
-        'package_version' => env('CERTIFICATES_PACKAGE_VERSION', '1.0.0'),
+        'package_version' => env('CERTIFICATES_PACKAGE_VERSION', '2.0.0'),
         'bootstrap_version' => 4,
         'designer_badge' => 'Certificate Designer',
         'create_title' => 'Create Certificate Template',

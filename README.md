@@ -40,7 +40,29 @@ The default routes are:
 - `GET|POST /certificates/manage/templates/preview`
 - `GET|POST /certificates/manage/templates/{template}/preview`
 
-Management routes use `web` by default so the package returns explicit authorization errors instead of depending on host-side redirect middleware. Verification, preview, and download use `web`. All prefixes, names and middleware are configurable. Host apps that need an admin prefix can set `routes.admin_prefix` and a custom middleware stack.
+Management routes use `web` by default. Add host middleware such as `auth`, policies, gates, or a custom access middleware when exposing the bundled management screens. Verification, preview, and download use `web`. All prefixes, names and middleware are configurable. Host apps that need an admin prefix can set `routes.admin_prefix` and a custom middleware stack.
+
+## Authorization is host-owned
+
+Version 2 intentionally does not make role, gate, permission, or policy decisions inside the package. The bundled management controllers and `CertificateManager` assume the host application has already decided whether the current request or service call is allowed.
+
+Protect management routes by configuring `certificates.routes.middleware`:
+
+```php
+'routes' => [
+    'middleware' => ['web', 'auth', 'can:manage-certificates'],
+],
+```
+
+or with any host middleware:
+
+```php
+'routes' => [
+    'middleware' => ['web', 'auth', 'certificate.manage'],
+],
+```
+
+The package still keeps certificate scope/tenancy separate through `CertificateScope`; scoping decides which records belong to the current tenant/context, not which human is authorized to manage certificates.
 
 ## Configure the host application
 
@@ -48,7 +70,7 @@ Set `certificates.layout` to a Blade layout that provides Bootstrap 5, Tabler Ic
 
 The default package assumes `App\Models\User`. Override `models.user` if the application's authenticatable model is elsewhere.
 
-The package does not assume a specific guard, role system, or menu schema. Configure certificate access by binding your own resolver classes or by replacing `CertificateContext`.
+Use host route middleware, policies, or gates for users who may access the bundled management screens. Replacing `CertificateContext` gives control over the current actor and recipient display data; it is not used for package-owned role authorization in v2.
 
 Most host-owned behavior is configurable without publishing package code:
 
@@ -63,7 +85,7 @@ Most host-owned behavior is configurable without publishing package code:
 - `ui.package_version` lets the host display the exact package build that is currently installed.
 - `ui.bootstrap_version` controls Bootstrap 4 vs 5 friendly markup defaults for the bundled designer views.
 - `models`, `tables`, `routes`, `storage`, `authorization`, `scope`, and `issuance.triggers` cover application integration. Management, verification, download, and preview routes can each be disabled independently.
-- `authorization.context`, `authorization.actor_resolver`, and `authorization.permission_resolver` let the host provide its own auth and permission adapter without forking the package. A small resolver can rely on the admin guard and your app's roles without touching menu permissions.
+- `authorization.context`, `authorization.actor_resolver`, and `authorization.permission_resolver` let the host provide actor/context adapters without forking the package. Permission decisions still belong in the host route middleware, policies, gates, or services.
 
 For behavior more specialized than scalar settings, replace a contract with a host class in configuration. Certificate-number and verification-URL generation are replaceable and remain compatible with `config:cache`:
 
@@ -103,7 +125,7 @@ php artisan migrate
 
 For a tenancy package or non-column ownership rules, implement and bind `CertificateScope` instead. This keeps tenant resolution and query scoping outside the certificate models, renderer, issuer, and core migration.
 
-Application authorization and recipient display values remain customizable through `CertificateContext`:
+Recipient display values and actor resolution remain customizable through `CertificateContext`:
 
 ```php
 use DavidOghi\CertificateGeneration\Contracts\CertificateContext;
@@ -112,13 +134,12 @@ use App\Certificates\ApplicationCertificateContext;
 $this->app->bind(CertificateContext::class, ApplicationCertificateContext::class);
 ```
 
-`CertificateContext` controls the current actor, management authorization, and recipient name/email extraction. It has no tenancy methods.
+`CertificateContext` controls the current actor and recipient name/email extraction. It has no tenancy methods, and host authorization should be handled before package controllers/services are invoked.
 
-The smallest host integration is usually a pair of resolver classes:
+The smallest host integration is usually an actor resolver:
 
 ```php
 use DavidOghi\CertificateGeneration\Contracts\CertificateActorResolver;
-use DavidOghi\CertificateGeneration\Contracts\CertificateAuthorizationResolver;
 use Illuminate\Contracts\Auth\Authenticatable;
 
 class HostCertificateActorResolver implements CertificateActorResolver
@@ -128,28 +149,17 @@ class HostCertificateActorResolver implements CertificateActorResolver
         return auth('admin')->user();
     }
 }
-
-class HostCertificateAuthorizationResolver implements CertificateAuthorizationResolver
-{
-    public function canManage(?Authenticatable $actor = null): bool
-    {
-        $roles = array_values(array_filter(array_map('strval', (array) ($actor?->roles ?? []))));
-
-        return $actor?->id === 1 || count(array_intersect($roles, ['Admin', 'Facilitator', 'Grader'])) > 0;
-    }
-}
 ```
 
-Then wire them in the host application config or service provider:
+Then wire it in the host application config or service provider:
 
 ```php
 'authorization' => [
     'context' => \DavidOghi\CertificateGeneration\Support\DefaultCertificateContext::class,
     'actor_resolver' => \App\Certificates\HostCertificateActorResolver::class,
-    'permission_resolver' => \App\Certificates\HostCertificateAuthorizationResolver::class,
 ],
 'ui' => [
-    'package_version' => '1.0.0',
+    'package_version' => '2.0.0',
 ],
 ```
 

@@ -968,11 +968,9 @@ class CertificateManager
 
     private function authorizeActor(Authenticatable $actor): void
     {
-        if (! $this->context->canManage($actor)) {
-            throw ValidationException::withMessages([
-                'certificate_template' => 'You are not allowed to manage certificate templates.',
-            ]);
-        }
+        // Authorization is intentionally host-owned in v2.
+        // The package receives an actor for auditing/scoping, but route
+        // middleware, policies or host services decide who may call it.
     }
 
     private function routeName(string $route): string
