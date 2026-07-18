@@ -23,6 +23,11 @@ use Throwable;
 
 class CertificateManager
 {
+    public function version(): string
+    {
+        return (string) config('certificates.ui.package_version', '1.0.0');
+    }
+
     public function __construct(
         private CertificateStorage $storage,
         private CertificateContext $context,
@@ -194,12 +199,12 @@ class CertificateManager
         $this->validateSettings($settings);
 
         $image = Image::make($background);
+        $canvas = $settings['canvas'] ?? [];
+        $canvasWidth = max(1, (int) ($canvas['width'] ?? $image->width()));
+        $canvasHeight = max(1, (int) ($canvas['height'] ?? $image->height()));
 
-        if ($image->width() > 4000 || $image->height() > 4000) {
-            $image->resize(4000, null, function ($constraint) {
-                $constraint->aspectRatio();
-                $constraint->upsize();
-            });
+        if ($image->width() !== $canvasWidth || $image->height() !== $canvasHeight) {
+            $image->resize($canvasWidth, $canvasHeight);
         }
 
         $elements = $this->normalizeElements($settings['elements'] ?? []);
@@ -608,6 +613,10 @@ class CertificateManager
             $text = mb_strtoupper($text);
         }
 
+        if ($width > 0) {
+            $text = $this->wrapTextToWidth($text, $fontFile, $size, $width);
+        }
+
         $image->text($text, $x, $y, function ($font) use ($fontFile, $size, $color, $align, $rotation, $width) {
             $font->file($fontFile);
             $font->size($size);
@@ -615,11 +624,107 @@ class CertificateManager
             $font->align($align);
             $font->valign('top');
             $font->angle($rotation);
-
-            if ($width > 0) {
-                $font->wrap($width);
-            }
         });
+    }
+
+    private function wrapTextToWidth(string $text, string $fontFile, float $size, int $maxWidth): string
+    {
+        if ($maxWidth <= 0 || ! function_exists('imagettfbbox') || ! is_file($fontFile)) {
+            return $text;
+        }
+
+        $text = preg_replace('/[ \t]+/u', ' ', trim($text)) ?? $text;
+        $paragraphs = preg_split("/\R/u", $text) ?: [$text];
+        $wrapped = [];
+
+        foreach ($paragraphs as $paragraph) {
+            $paragraph = trim((string) $paragraph);
+
+            if ($paragraph === '') {
+                $wrapped[] = '';
+                continue;
+            }
+
+            $lines = [];
+            $currentLine = '';
+            $words = preg_split('/\s+/u', $paragraph, -1, PREG_SPLIT_NO_EMPTY) ?: [$paragraph];
+
+            foreach ($words as $word) {
+                $candidate = $currentLine === '' ? $word : $currentLine.' '.$word;
+
+                if ($this->estimateTextWidth($candidate, $fontFile, $size) <= $maxWidth) {
+                    $currentLine = $candidate;
+                    continue;
+                }
+
+                if ($currentLine !== '') {
+                    $lines[] = $currentLine;
+                    $currentLine = '';
+                }
+
+                if ($this->estimateTextWidth($word, $fontFile, $size) <= $maxWidth) {
+                    $currentLine = $word;
+                    continue;
+                }
+
+                $segments = $this->breakWordToWidth($word, $fontFile, $size, $maxWidth);
+                $lastIndex = count($segments) - 1;
+
+                foreach ($segments as $index => $segment) {
+                    if ($index === $lastIndex) {
+                        $currentLine = $segment;
+                    } else {
+                        $lines[] = $segment;
+                    }
+                }
+            }
+
+            if ($currentLine !== '') {
+                $lines[] = $currentLine;
+            }
+
+            $wrapped[] = implode("\n", $lines);
+        }
+
+        return implode("\n", $wrapped);
+    }
+
+    private function breakWordToWidth(string $word, string $fontFile, float $size, int $maxWidth): array
+    {
+        $characters = preg_split('//u', $word, -1, PREG_SPLIT_NO_EMPTY) ?: [$word];
+        $segments = [];
+        $segment = '';
+
+        foreach ($characters as $character) {
+            $candidate = $segment.$character;
+
+            if ($segment !== '' && $this->estimateTextWidth($candidate, $fontFile, $size) > $maxWidth) {
+                $segments[] = $segment;
+                $segment = $character;
+                continue;
+            }
+
+            $segment = $candidate;
+        }
+
+        if ($segment !== '') {
+            $segments[] = $segment;
+        }
+
+        return $segments;
+    }
+
+    private function estimateTextWidth(string $text, string $fontFile, float $size): int
+    {
+        $bbox = imagettfbbox($size, 0, $fontFile, $text);
+
+        if (! is_array($bbox)) {
+            return 0;
+        }
+
+        $xs = [$bbox[0], $bbox[2], $bbox[4], $bbox[6]];
+
+        return (int) (max($xs) - min($xs));
     }
 
     private function renderQrCodeElement($image, array $element, string $verificationUrl): void

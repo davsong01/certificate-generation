@@ -35,6 +35,17 @@ class CertificateTemplateController extends Controller
             ->when($filters['module'] ?? null, fn ($query, $module) => $query->forModule($module))
             ->latest('id')->paginate(15)->withQueryString();
 
+        $templates->getCollection()->transform(function (CertificateTemplate $template): CertificateTemplate {
+            $description = (string) ($template->description ?? '');
+            if (preg_match('/^Migrated from legacy program ID (\d+)$/', $description, $matches)) {
+                $template->display_description = 'Legacy source program #'.$matches[1];
+            } else {
+                $template->display_description = $description;
+            }
+
+            return $template;
+        });
+
         $model = config('certificates.models.template', CertificateTemplate::class);
 
         return view('certificates::templates.index', [
@@ -45,6 +56,7 @@ class CertificateTemplateController extends Controller
                 'total' => $this->scope->apply($model::query())->count(),
                 'active' => $this->scope->apply($model::query())->active()->count(),
                 'issued' => $this->scope->apply(config('certificates.models.issued_certificate')::query())->count(),
+                'assigned_programs' => Program::whereNotNull('certificate_template_id')->count(),
             ],
         ]);
     }
@@ -117,6 +129,20 @@ class CertificateTemplateController extends Controller
             ->with('success', 'Certificate template duplicated successfully.');
     }
 
+    public function download(string|int $template)
+    {
+        $template = $this->resolveTemplate($template);
+        abort_unless($this->context->canManage(), 403);
+        abort_unless($this->scope->owns($template, $this->context->actor()), 404);
+        abort_unless($template->certificate_template && Storage::disk(config('certificates.storage.disk'))->exists($template->certificate_template), 404);
+
+        $disk = Storage::disk(config('certificates.storage.disk'));
+        $absolute = $disk->path($template->certificate_template);
+        $name = basename($template->certificate_template);
+
+        return response()->download($absolute, $name);
+    }
+
     public function preview(Request $request, string|int|null $template = null)
     {
         $template = $template === null ? null : $this->resolveTemplate($template);
@@ -173,11 +199,11 @@ class CertificateTemplateController extends Controller
             ->orderBy('p_name')
             ->get()
             ->filter(function (Program $program) use ($template) {
-                if ($template?->programs?->contains($program->id)) {
+                if ($template && (int) $program->certificate_template_id === (int) $template->id) {
                     return true;
                 }
 
-                return blank($program->certificate_template_id) && blank($program->auto_certificate_settings);
+                return blank($program->certificate_template_id);
             })
             ->values();
 
@@ -187,13 +213,23 @@ class CertificateTemplateController extends Controller
             'backgroundPreview' => $background,
             'previewKey' => $template ? 'template-'.$template->id : 'draft-'.str()->uuid(),
             'programs' => $programs,
-            'selectedProgramIds' => $template?->programs()->pluck('id')->all() ?? [],
+            'selectedProgramIds' => $template
+                ? Program::where('certificate_template_id', $template->id)->pluck('id')->all()
+                : [],
         ];
     }
 
     private function syncPrograms(CertificateTemplate $template, array $programIds): void
     {
-        $template->programs()->sync($programIds);
+        $programIds = array_values(array_unique(array_map('intval', $programIds)));
+
+        Program::where('certificate_template_id', $template->id)
+            ->when($programIds !== [], fn ($query) => $query->whereNotIn('id', $programIds))
+            ->update(['certificate_template_id' => null]);
+
+        if ($programIds !== []) {
+            Program::whereIn('id', $programIds)->update(['certificate_template_id' => $template->id]);
+        }
     }
 
     private function templateQuery()

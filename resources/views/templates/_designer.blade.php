@@ -80,6 +80,22 @@
         border-radius: 12px;
     }
 
+    .certificate-designer .badge {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        width: auto !important;
+        height: auto !important;
+        min-width: 0;
+        padding: .35rem .6rem;
+        border-radius: .35rem !important;
+        box-shadow: none;
+        font-size: .75rem;
+        font-weight: 600;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
     .certificate-designer .designer-shell {
         margin-bottom: 1rem;
     }
@@ -249,7 +265,7 @@
         inset: 0;
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: fill;
         user-select: none;
         pointer-events: none;
     }
@@ -926,7 +942,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Server Preview</h5>
-                    <button type="button" class="close" data-bs-dismiss="modal" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <div class="text-center">
@@ -2079,10 +2095,27 @@
         backgroundImage.style.display = 'block';
     }
 
+    function buildAjaxFormData(extraFields = {}) {
+        const payload = new FormData(form);
+
+        // Keep AJAX actions isolated from the save form's spoofed HTTP method.
+        payload.delete('_method');
+
+        Object.entries(extraFields).forEach(([key, value]) => {
+            if (value === null || value === undefined) {
+                payload.delete(key);
+                return;
+            }
+
+            payload.set(key, value);
+        });
+
+        return payload;
+    }
+
     function previewTemplate() {
         syncSettingsField();
-        const formData = new FormData(form);
-        formData.set('settings', settingsField.value);
+        const formData = buildAjaxFormData({ settings: settingsField.value });
 
         const modal = window.bootstrap && window.bootstrap.Modal && previewModalElement
             ? new window.bootstrap.Modal(previewModalElement)

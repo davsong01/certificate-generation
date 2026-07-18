@@ -54,7 +54,7 @@ return [
         'prefix' => 'certificates',
         'management_prefix' => 'manage',
         'admin_prefix' => null,
-        'middleware' => ['web', 'auth'],
+        'middleware' => ['web'],
         'public_middleware' => ['web'],
         'name' => 'certificates.',
     ],
@@ -116,6 +116,8 @@ return [
     ],
 
     'ui' => [
+        // The host can display this to verify which package build is deployed.
+        'package_version' => env('CERTIFICATES_PACKAGE_VERSION', '1.0.0'),
         'bootstrap_version' => 4,
         'designer_badge' => 'Certificate Designer',
         'create_title' => 'Create Certificate Template',

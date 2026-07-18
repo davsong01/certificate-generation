@@ -18,7 +18,10 @@
                                 </option>
                             @endforeach
                         </select>
-                        <small class="text-muted d-block mt-1">These programs will use the new certificate designer for generation.</small>
+                        <small class="text-muted d-block mt-1">Legacy programs are included here too as long as they are not already assigned to a new designer template.</small>
+                        <div class="alert alert-info py-2 px-3 mt-3 mb-0">
+                            Selected programs will inherit this template after save and use the new certificate designer for generation.
+                        </div>
                     </div>
                 </div>
             </div>

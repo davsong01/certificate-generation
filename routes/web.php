@@ -28,9 +28,10 @@ if (config('certificates.routes.management_enabled', true)) {
         ->prefix(implode('/', array_filter([$adminPrefix, $prefix, $managementPrefix])))->name($name.'manage.')->group(function (): void {
             Route::get('issued', IssuedCertificateController::class)->name('issued.index');
             if (config('certificates.routes.preview_enabled', true)) {
-                Route::post('templates/preview', [CertificateTemplateController::class, 'preview'])->name('templates.preview');
-                Route::post('templates/{template}/preview', [CertificateTemplateController::class, 'preview'])->name('templates.preview-template');
+                Route::match(['get', 'post'], 'templates/preview', [CertificateTemplateController::class, 'preview'])->name('templates.preview');
+                Route::match(['get', 'post'], 'templates/{template}/preview', [CertificateTemplateController::class, 'preview'])->name('templates.preview-template');
             }
+            Route::get('templates/{template}/download', [CertificateTemplateController::class, 'download'])->name('templates.download');
             Route::post('templates/{template}/duplicate', [CertificateTemplateController::class, 'duplicate'])->name('templates.duplicate');
             Route::resource('templates', CertificateTemplateController::class);
         });

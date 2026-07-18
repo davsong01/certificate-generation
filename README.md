@@ -18,7 +18,7 @@ Composer installs `intervention/image`, `endroid/qr-code`, and Dompdf's DejaVu f
 ## Install
 
 ```bash
-composer require david-oghi/certificate-generation
+composer require david-oghi/certificate-generation:^1.0
 php artisan vendor:publish --tag=certificates-config
 php artisan vendor:publish --tag=certificates-migrations
 php artisan migrate
@@ -37,8 +37,10 @@ The default routes are:
 - `GET /certificates/{certificateNumber}/verify`
 - `GET /certificates/{certificateNumber}/download`
 - `GET /certificates/preview/{token}`
+- `GET|POST /certificates/manage/templates/preview`
+- `GET|POST /certificates/manage/templates/{template}/preview`
 
-Management routes use `web` and `auth` by default; verification, preview, and download use `web`. All prefixes, names and middleware are configurable. Host apps that need an admin prefix can set `routes.admin_prefix` and a custom middleware stack.
+Management routes use `web` by default so the package returns explicit authorization errors instead of depending on host-side redirect middleware. Verification, preview, and download use `web`. All prefixes, names and middleware are configurable. Host apps that need an admin prefix can set `routes.admin_prefix` and a custom middleware stack.
 
 ## Configure the host application
 
@@ -58,9 +60,10 @@ Most host-owned behavior is configurable without publishing package code:
 - `certificate_numbers` controls the standard prefix, separator, scope/year parts, random length, and collision attempts.
 - `templates.delete_policy` is `restrict` by default; set it to `cascade` only when deleting issued records and files with their template is intentional.
 - `ui` controls the bundled designer's main terminology; publish the views for complete presentation changes.
+- `ui.package_version` lets the host display the exact package build that is currently installed.
 - `ui.bootstrap_version` controls Bootstrap 4 vs 5 friendly markup defaults for the bundled designer views.
 - `models`, `tables`, `routes`, `storage`, `authorization`, `scope`, and `issuance.triggers` cover application integration. Management, verification, download, and preview routes can each be disabled independently.
-- `authorization.context`, `authorization.actor_resolver`, and `authorization.permission_resolver` let the host provide its own auth and permission adapter without forking the package.
+- `authorization.context`, `authorization.actor_resolver`, and `authorization.permission_resolver` let the host provide its own auth and permission adapter without forking the package. A small resolver can rely on the admin guard and your app's roles without touching menu permissions.
 
 For behavior more specialized than scalar settings, replace a contract with a host class in configuration. Certificate-number and verification-URL generation are replaceable and remain compatible with `config:cache`:
 
@@ -130,7 +133,9 @@ class HostCertificateAuthorizationResolver implements CertificateAuthorizationRe
 {
     public function canManage(?Authenticatable $actor = null): bool
     {
-        return $actor?->id === 1 || in_array('certificates.manage.templates.index', $actor?->menu_permissions ?? [], true);
+        $roles = array_values(array_filter(array_map('strval', (array) ($actor?->roles ?? []))));
+
+        return $actor?->id === 1 || count(array_intersect($roles, ['Admin', 'Facilitator', 'Grader'])) > 0;
     }
 }
 ```
@@ -142,6 +147,9 @@ Then wire them in the host application config or service provider:
     'context' => \DavidOghi\CertificateGeneration\Support\DefaultCertificateContext::class,
     'actor_resolver' => \App\Certificates\HostCertificateActorResolver::class,
     'permission_resolver' => \App\Certificates\HostCertificateAuthorizationResolver::class,
+],
+'ui' => [
+    'package_version' => '1.0.0',
 ],
 ```
 

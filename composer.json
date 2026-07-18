@@ -1,5 +1,6 @@
 {
     "name": "david-oghi/certificate-generation",
+    "version": "1.0.0",
     "description": "A reusable Laravel certificate template designer, renderer, issuer, verifier and download package.",
     "type": "library",
     "license": "MIT",
@@ -27,6 +28,9 @@
             "providers": [
                 "DavidOghi\\CertificateGeneration\\CertificateServiceProvider"
             ]
+        },
+        "branch-alias": {
+            "dev-main": "1.0.x-dev"
         }
     },
     "minimum-stability": "stable",

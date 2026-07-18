@@ -25,8 +25,10 @@ class AdminCertificateAuthorizationResolver implements CertificateAuthorizationR
 {
     public function canManage(?Authenticatable $actor = null): bool
     {
+        $roles = array_values(array_filter(array_map('strval', (array) ($actor?->roles ?? []))));
+
         return $actor?->id === 1
-            || in_array('certificates.manage.templates.index', $actor?->menu_permissions ?? [], true);
+            || count(array_intersect($roles, ['Admin', 'Facilitator', 'Grader'])) > 0;
     }
 }
 ```
@@ -46,3 +48,5 @@ $this->app->bind(
 ```
 
 If a host app uses a different guard, role system, or permission storage, only this adapter needs to change.
+
+The package's preview routes accept both `GET` and `POST`, so the browser can open a preview URL directly without relying on a redirect back into the dashboard. Your designer JavaScript can keep posting JSON to the same route.
