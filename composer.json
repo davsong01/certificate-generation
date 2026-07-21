@@ -29,6 +29,22 @@
                 "DavidOghi\\CertificateGeneration\\CertificateServiceProvider"
             ]
         },
+        "davsong": {
+            "origin_application": {
+                "name": "Oakland",
+                "repository": "https://github.com/davsong01/oakland.git",
+                "local_path": "/Applications/MAMP/htdocs/oakland",
+                "package_source_path": "/Applications/MAMP/htdocs/oakland/packages/david-oghi/certificate-generation",
+                "note": "This package was first extracted from the Oakland certificate designer implementation."
+            },
+            "test_application": {
+                "name": "Oakland",
+                "repository": "https://github.com/davsong01/oakland.git",
+                "local_path": "/Applications/MAMP/htdocs/oakland",
+                "package_source_path": "/Applications/MAMP/htdocs/oakland/packages/david-oghi/certificate-generation",
+                "note": "Use this Laravel app as the living integration test project before publishing package updates."
+            }
+        },
         "branch-alias": {
             "dev-main": "1.0.x-dev"
         }
